@@ -61,7 +61,8 @@
 
             <div class="twitter-feed__item__other__details">
               <a-list-item-meta>
-                <a slot="title" :href="'#'">{{item.text}}</a>
+                <a slot="title" :href="`https://twitter.com/${item.user.screen_name}/status/${item.id_str}`" target="_blank" v-if="typeof item.retweeted_status === 'undefined'">{{item.text}}</a>
+                <a slot="title" :href="item.retweeted_status.entities.urls[0].expanded_url" target="_blank" v-else>{{item.text}}</a>
               </a-list-item-meta>
               <span>
                 <a-icon type="retweet"/>
