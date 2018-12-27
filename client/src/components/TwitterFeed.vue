@@ -61,8 +61,8 @@
 
             <div class="twitter-feed__item__other__details">
               <a-list-item-meta>
-                <a slot="title" :href="`https://twitter.com/${item.user.screen_name}/status/${item.id_str}`" target="_blank" v-if="typeof item.retweeted_status === 'undefined'">{{item.text}}</a>
-                <a slot="title" :href="item.retweeted_status.entities.urls[0].expanded_url" target="_blank" v-else>{{item.text}}</a>
+                <a slot="title" :style="{ color: settings.linkColor }" :href="`https://twitter.com/${item.user.screen_name}/status/${item.id_str}`" target="_blank" v-if="typeof item.retweeted_status === 'undefined'">{{item.text}}</a>
+                <a slot="title" :style="{ color: settings.linkColor }" :href="item.retweeted_status.entities.urls[0].expanded_url" target="_blank" v-else>{{item.text}}</a>
               </a-list-item-meta>
               <span>
                 <a-icon type="retweet"/>
@@ -86,23 +86,44 @@
       <a-drawer
         width=400
         placement="right"
-        :title="selectedAccount"
+        title="Settings"
         @close="onCloseShowAccountSettings"
         :visible="showAccountSettings"
       >
         <a-row>
+          <p>Sort Twitter feeds</p>
+          <draggable v-model="orderedAccounts" :options="{group:'people'}">
+              <transition-group>
+                <div class="twitter-feed-list__draggable__item" v-for="(element, idx) in allAccounts" :key="'account_draggable_' + idx">
+                    {{element.name}}
+                </div>
+              </transition-group>
+          </draggable>
+        </a-row>
+        <br />
+        <a-row>
+          <p>Pick range of dates to filter the posts</p>
+          <a-range-picker @change="onChangeFilterPostsByDate" />
+        </a-row>
+        <br />
+        <a-row>
           <p>Number of posts to show (max: {{ count }})</p>
           <a-col :span="16">
-            <a-slider :min="0" :max="count" v-model="settings.show_posts_count" />
+            <a-slider :min="1" :max="count" v-model="settings.showPostsCount" />
           </a-col>
           <a-col :span="4">
             <a-input-number
-              :min="0"
+              :min="1"
               :max="count"
               style="marginLeft: 16px"
-              v-model="settings.show_posts_count"
+              v-model="settings.showPostsCount"
             />
           </a-col>
+        </a-row>
+
+        <a-row>
+          <p>Choose a color for the feed</p>
+          <color-picker color="#000000" @change="onColorPickerChange"></color-picker>
         </a-row>
       </a-drawer>
 
@@ -150,6 +171,8 @@
 </template>
 
 <script>
+import moment from 'moment'
+import draggable from 'vuedraggable'
 import Loading from 'vue-loading-overlay'
 import { numberFormatter } from '@/utils'
 import { mapActions, mapGetters } from 'vuex'
@@ -157,10 +180,10 @@ import { mapActions, mapGetters } from 'vuex'
 export default {
   props: {
     account: { default: '', type: String },
-    count: { default: 10, type: Number }
+    count: { default: 30, type: Number }
   },
 
-  components: { Loading },
+  components: { Loading, draggable },
 
   data () {
     return {
@@ -170,7 +193,9 @@ export default {
       showAccountSettings: false,
       selectedAccount: '',
       settings: {
-        show_posts_count: 10
+        backgroundColor: '#ffffff',
+        linkColor: '#000000',
+        showPostsCount: 30
       }
     }
   },
@@ -180,14 +205,27 @@ export default {
   },
 
   mounted () {
+    this.addAccount(this.account)
     this.handleGetFeedData()
   },
 
   computed: {
     ...mapGetters({
       getFeedsByAccount: 'feeds/getFeedsByAccount',
-      isLoading: 'feeds/isLoading'
-    })
+      isLoading: 'feeds/isLoading',
+      allAccounts: 'getAccounts'
+    }),
+
+    orderedAccounts: {
+      get () { return this.$store.state.accounts },
+      set (val) {
+        const orderedAccounts = []
+        val.forEach(({ name }, idx) => {
+          orderedAccounts.push({ name, order: idx + 1 })
+        })
+        this.$store.dispatch('setAccounts', orderedAccounts)
+      }
+    }
   },
 
   watch: {
@@ -203,12 +241,20 @@ export default {
 
     feedData (newVal, oldVal) {
       this.accountOwner = newVal.data[0].user
+    },
+
+    'settings.showPostsCount': async function (newVal, oldVal) {
+      this.$store.dispatch('feeds/updateFeed', { account: this.account, count: parseInt(newVal) })
+      console.log(this.feedData)
     }
   },
 
   methods: {
+    moment,
+
     ...mapActions({
-      getFeed: 'feeds/getFeed'
+      getFeed: 'feeds/getFeed',
+      addAccount: 'addAccount'
     }),
 
     formatNumber (num) {
@@ -232,12 +278,26 @@ export default {
       this.showAccountSettings = true
     },
 
+    onChangeFilterPostsByDate (val, dateString) {
+      const { data } = this.feedData
+      const tmpData = data.filter((item) => {
+        let dt = moment(item.created_at).format('YYYY-MM-DD')
+        return moment(dt).isSameOrAfter(dateString[0]) && moment(dt).isSameOrBefore(dateString[1])
+      })
+      this.feedData.data = tmpData
+    },
+
     onCloseShowAccountSettings () {
       this.showAccountSettings = false
     },
 
     onCloseShowFeedProfile () {
       this.showFeedProfile = false
+    },
+
+    onColorPickerChange (color) {
+      this.settings.linkColor = color.hex
+      this.$store.commit('updateLinkColor', { account: this.account, color: color.hex })
     },
 
     resetMessages () {
@@ -272,4 +332,17 @@ export default {
       }
     }
   }
+
+  .twitter-feed-list__draggable__item {
+      position: relative;
+      display: block;
+      padding: 10px 15px;
+      margin-bottom: -1px;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      cursor: move;
+      cursor: grab;
+      cursor: -moz-grab;
+      cursor: -webkit-grab;
+    }
 </style>

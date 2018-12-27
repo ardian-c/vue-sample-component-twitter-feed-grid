@@ -12,6 +12,19 @@ export const getFeed = async ({ commit, dispatch }, payload) => {
   commit('setFeedsLoading', false)
 }
 
+export const updateFeed = async ({ commit, dispatch }, payload) => {
+  const { account, count } = payload
+  commit('setFeedsLoading', true)
+  try {
+    const { data } = await feedService.getFeedByUsername(account, count)
+    commit('updateFeed', { account, data })
+    commit('updatePostCount', { account, count }, { root: true })
+  } catch (err) {
+    dispatch('failedApiRequest', 'Something went wrong!')
+  }
+  commit('setFeedsLoading', false)
+}
+
 export const failedApiRequest = ({ commit }, payload) => {
   commit('setRequestFailedMessage', payload)
 }

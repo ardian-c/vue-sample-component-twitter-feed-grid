@@ -10,15 +10,19 @@
 
 <script>
 import Vue from 'vue'
-import { Avatar, Button, Card, Col, Drawer, Dropdown, Divider, Icon, Input, InputNumber, List, Menu, Row, Slider, message } from 'ant-design-vue'
+import ColorPicker from 'v-color'
+import { Avatar, Button, Card, Col, DatePicker, Drawer, Dropdown, Divider, Icon, Input, InputNumber, List, Menu, Row, Slider, message } from 'ant-design-vue'
+import { mapActions, mapGetters } from 'vuex'
 
 Vue.use(Avatar)
 Vue.use(Button)
 Vue.use(Card)
 Vue.use(Col)
+Vue.use(ColorPicker)
+Vue.use(DatePicker)
+Vue.use(Divider)
 Vue.use(Drawer)
 Vue.use(Dropdown)
-Vue.use(Divider)
 Vue.use(Icon)
 Vue.use(List)
 Vue.use(Menu)
@@ -32,9 +36,6 @@ Vue.prototype.$message = message
 export default {
   name: 'Homepage',
 
-  computed: {
-  },
-
   components: {
 
   },
@@ -43,18 +44,37 @@ export default {
     return {
       accounts: [{
         name: 'MakeSchool',
-        count: 30,
         order: 1
       }, {
         name: 'newsycombinator',
-        count: 30,
         order: 2
       }, {
         name: 'ycombinator',
-        count: 30,
         order: 3
       }]
     }
+  },
+
+  computed: {
+    ...mapGetters({
+      allAccounts: 'getAccounts'
+    })
+  },
+
+  watch: {
+    allAccounts (newVal, oldVal) {
+      this.accounts = newVal
+    }
+  },
+
+  mounted () {
+    this.setAccounts(this.accounts)
+  },
+
+  methods: {
+    ...mapActions({
+      setAccounts: 'setAccounts'
+    })
   }
 }
 </script>

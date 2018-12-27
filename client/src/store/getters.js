@@ -1,1 +1,1 @@
-// global getters
+export const getAccounts = state => state.accounts
